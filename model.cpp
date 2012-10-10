@@ -2,6 +2,9 @@
 using namespace std;
 using namespace bpp;
 
+//oMP// 
+//oMP// add openMP into this function
+//oMP// 
 
 scalar_type exODT_model::p(approx_posterior *ale)
 {
@@ -24,6 +27,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
   //test  
 
   //directed partitions and thier sizes
+
+  //oMP// 
+  //oMP// I sort the directed partitions by size (number of gene tree leaves) to insure that we calculate things in the propoer order
+  //oMP// 
+
   vector <long int>  g_ids;//del-loc
   vector <long int>  g_id_sizes;//del-loc  
   for (map <int, vector <long int > > :: iterator it = ale->size_ordered_bips.begin(); it != ale->size_ordered_bips.end(); it++)
@@ -69,6 +77,16 @@ scalar_type exODT_model::p(approx_posterior *ale)
 	}	 
     }
    
+  //oMP// 
+  //oMP// below is the loop that iterates over the sorted g_ids, it is this one that should be amicable to openMP  
+  //oMP// the importatn thing is that we can only do the g_ids in parallel that have the same number of leaves
+  //oMP// hence the sorting above..
+  //oMP// 
+  //oMP// the calculation fills out the global q, cf. exODT.h, this is latter needed for sampling reconcilations! 
+  //oMP// 
+  //oMP// 
+
+
   for (int i=0;i<(int)g_ids.size();i++)
     {	
       // directed partition (dip) gamma's id  
