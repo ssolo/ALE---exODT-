@@ -1,6 +1,6 @@
 
 CC=g++
-CC=mpicc
+MCC=mpicc
 
 FLAGS = -O3  -fmerge-all-constants -funroll-loops -DNDEBUG -Wall
 DEV_FLAGS =  -g -Wall
