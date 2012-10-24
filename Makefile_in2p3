@@ -45,22 +45,5 @@ libALE.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o Makefile
 
 
 test:	libALE.a test.cpp Makefile
-	$(CC) $(FLAGS) $(INCLUDE)  -o test test.cpp libALE.a $(LINK)
+	$(CC) test.cpp -o test $(FLAGS) $(INCLUDE) libALE.a $(LINK) 
 	strip test
-nni:	libALE.a nni.cpp Makefile
-	$(CC) $(FLAGS) $(INCLUDE)  -o nni nni.cpp libALE.a $(LINK)
-	strip nni
-
-test_mpi:	libexODT.a test_mpi.cpp Makefile
-	$(mCC) $(FLAGS) $(INCLUDE) $(LINK) libexODT.a -o test_mpi test_mpi.cpp 
-	strip test_mpi
-
-
-decompose: decompose.cpp ALE.o Makefile
-	$(CC) $(FLAGS) $(INCLUDE) $(LINK) ALE.o -o decompose decompose.cpp 
-	strip decompose	
-
-process_trees: process_trees.cpp libALE.a Makefile
-	$(CC) $(FLAGS) $(INCLUDE)  -o process_trees process_trees.cpp $(LINK)
-	strip process_trees	
-
