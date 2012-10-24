@@ -40,10 +40,10 @@ mpi_tree.o: ALE.h exODT.h mpi_tree.h mpi_tree.cpp Makefile
 rate_estimate.o: ALE.h exODT.h mpi_tree.h rate_estimate.cpp Makefile 
 	$(CC) $(FLAGS) $(INCLUDE)  -c -o rate_estimate.o rate_estimate.cpp
 
-libexODT.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o  Makefile
+libexODT.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o sample.o Makefile
 	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o sample.o ALE_util.o ML_util.o
 
-libexODT_mpi.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o  mpi_tree.o rate_estimate.o Makefile
+libexODT_mpi.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o sample.o mpi_tree.o rate_estimate.o Makefile
 	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o sample.o mpi_tree.o rate_estimate.o ALE_util.o ML_util.o
 
 libALE.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o Makefile
