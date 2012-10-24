@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
   //we need an ale
   string ale_file=argv[2];
   vector <string> tokens;
-  boost::split(tokens,name,boost::is_any_of("."),boost::token_compress_on);
+  boost::split(tokens,ale_file,boost::is_any_of("."),boost::token_compress_on);
   ale_file=tokens[0];
   // exODT always takes an approx_posterior object as its input
   approx_posterior * ale;
