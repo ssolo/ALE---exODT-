@@ -44,6 +44,6 @@ libALE.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o Makefile
 	ar rcs libALE.a ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o
 
 
-test:	libALE.a test.cpp Makefile
-	$(CC) test.cpp -o test $(FLAGS) $(INCLUDE) libALE.a $(LINK) 
+test:	libexODT.a test.cpp Makefile
+	$(CC) test.cpp -o test $(FLAGS) $(INCLUDE) libexODT.a $(LINK) 
 	strip test
