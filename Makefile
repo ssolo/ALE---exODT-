@@ -116,3 +116,7 @@ malate:	libexODT.a malate.cpp Makefile
 test_sample: 	libexODT.a test_sample.cpp Makefile
 	$(CC) test_sample.cpp -o test_sample  $(FLAGS) $(INCLUDE) $(STATIC) $(LINK)
 	strip test_sample
+
+rate_sample: 	libexODT.a rate_sample.cpp Makefile
+	$(CC) rate_sample.cpp -o rate_sample  $(FLAGS) $(INCLUDE) $(STATIC) $(LINK)
+	strip rate_sample
