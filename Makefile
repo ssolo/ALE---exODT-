@@ -1,5 +1,5 @@
 
-CC=g++
+CC=g++ -pipe
 mCC=mpic++
 
 FLAGS = -O3  -fmerge-all-constants -funroll-loops -DNDEBUG -Wall
