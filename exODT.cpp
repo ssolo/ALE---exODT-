@@ -274,7 +274,7 @@ void exODT_model::construct(string Sstring,scalar_type N)
 
 //*/
 
-  set_model_parameter("event_node",1);
+  set_model_parameter("event_node",0);
   set_model_parameter("N",N);
   set_model_parameter("Delta_bar",N*2.);
   set_model_parameter("Lambda_bar",N*2.);
