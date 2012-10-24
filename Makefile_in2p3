@@ -31,6 +31,9 @@ model.o: ALE.h exODT.h model.cpp Makefile
 	$(CC) $(FLAGS) $(INCLUDE)  -c -o model.o model.cpp
 traceback.o: ALE.h exODT.h traceback.cpp Makefile 
 	$(CC) $(FLAGS) $(INCLUDE)  -c -o traceback.o traceback.cpp
+sample.o: ALE.h exODT.h sample.cpp Makefile 
+	$(CC) $(FLAGS) $(INCLUDE)  -c -o sample.o sample.cpp	
+
 
 mpi_tree.o: ALE.h exODT.h mpi_tree.h mpi_tree.cpp Makefile 
 	$(CC) $(FLAGS) $(INCLUDE)  -c -o mpi_tree.o mpi_tree.cpp
@@ -38,10 +41,10 @@ rate_estimate.o: ALE.h exODT.h mpi_tree.h rate_estimate.cpp Makefile
 	$(CC) $(FLAGS) $(INCLUDE)  -c -o rate_estimate.o rate_estimate.cpp
 
 libexODT.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o  Makefile
-	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o ALE_util.o ML_util.o
+	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o sample.o ALE_util.o ML_util.o
 
 libexODT_mpi.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o  mpi_tree.o rate_estimate.o Makefile
-	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o  mpi_tree.o rate_estimate.o ALE_util.o ML_util.o
+	ar rcs libexODT.a ALE.o exODT.o model.o traceback.o sample.o mpi_tree.o rate_estimate.o ALE_util.o ML_util.o
 
 libALE.a: ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o Makefile
 	ar rcs libALE.a ALE.o ALE_util.o ML_util.o exODT.o model.o traceback.o
