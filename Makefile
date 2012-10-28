@@ -2,7 +2,7 @@
 CC=g++ -pipe
 mCC=mpic++
 
-FLAGS = -O3  -fmerge-all-constants -funroll-loops -DNDEBUG -Wall
+FLAGS = -O3  -fmerge-all-constants -funroll-loops -DNDEBUG -Wall -std=gnu++11
 DEV_FLAGS =  -g -Wall
 
 boost_DIR=/usr/local/
