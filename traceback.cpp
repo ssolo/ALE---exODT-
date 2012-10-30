@@ -160,7 +160,7 @@ pair<string,scalar_type> exODT_model::p_MLRec(approx_posterior *ale, bool lowmem
 
 	      //root
 	      scalar_type Delta_t=tpdt-t;
-	      scalar_type N=vector_parameter["N"][rank];
+	      //scalar_type N=vector_parameter["N"][rank];
 	      scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
 	      //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
 	      //OMG
@@ -240,9 +240,9 @@ pair<string,scalar_type> exODT_model::p_MLRec(approx_posterior *ale, bool lowmem
 			      if (not is_a_leaf)
 				for (int i=0;i<N_parts;i++)
 				  {	
-				    long int gp_id=gp_ids[i];
-				    long int gpp_id=gpp_ids[i];	    
-				    scalar_type pp=p_part[i];
+				    long int gp_id=gp_ids.at(i);
+				    long int gpp_id=gpp_ids.at(i);	    
+				    scalar_type pp=p_part.at(i);
 				    scalar_type S_pf_ppg=q[gp_id][t][f]*q[gpp_id][t][g]*pp;
 				    scalar_type S_ppf_pg=q[gpp_id][t][f]*q[gp_id][t][g]*pp;
 				    //S EVENT
@@ -326,9 +326,9 @@ pair<string,scalar_type> exODT_model::p_MLRec(approx_posterior *ale, bool lowmem
 		      if (not is_a_leaf)
 			for (int i=0;i<N_parts;i++)
 			  {	
-			    long int gp_id=gp_ids[i];
-			    long int gpp_id=gpp_ids[i];	    
-			    scalar_type pp=p_part[i];
+			    long int gp_id=gp_ids.at(i);
+			    long int gpp_id=gpp_ids.at(i);	    
+			    scalar_type pp=p_part.at(i);
 			    scalar_type T_ep_app=p_Ntau_e*q[gp_id][t][e]*q[gpp_id][t][alpha]*pp;
 			    scalar_type T_ap_epp=p_Ntau_e*q[gp_id][t][alpha]*q[gpp_id][t][e]*pp;
 			    //Tb EVENT
@@ -370,7 +370,7 @@ pair<string,scalar_type> exODT_model::p_MLRec(approx_posterior *ale, bool lowmem
 		  if (not is_a_leaf)
 		    for (int i=0;i<N_parts;i++)
 		      {	
-			long int gp_id=gp_ids[i];
+			long int gp_id=gp_ids.at(i);
 			long int gpp_id=gpp_ids[i];	    
 			scalar_type pp=p_part[i];
 			scalar_type Sb=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha])*pp;
@@ -485,9 +485,9 @@ pair<string,scalar_type> exODT_model::p_MLRec(approx_posterior *ale, bool lowmem
 		      if (not is_a_leaf)
 			for (int i=0;i<N_parts;i++)
 			  {	
-			    long int gp_id=gp_ids[i];
-			    long int gpp_id=gpp_ids[i];	    
-			    scalar_type pp=p_part[i];
+			    long int gp_id=gp_ids.at(i);
+			    long int gpp_id=gpp_ids.at(i);	    
+			    scalar_type pp=p_part.at(i);
 			    scalar_type qpe=q[gp_id][t][e];
 			    scalar_type qppe=q[gpp_id][t][e];
 			    scalar_type Sb_pa_ppe= p_Delta_bar*q[gp_id][t][alpha]*qppe*pp;
@@ -796,9 +796,22 @@ pair<string,scalar_type> exODT_model::traceback()
 
 string exODT_model::traceback(long int g_id,scalar_type t,scalar_type rank,int e,scalar_type branch_length,string branch_events, string transfer_token)
 {
-  //cout << "from " << e << " " << t << " " << endl; 
+  /*
+  if (e==alpha)
+    cout << "b "<<-1;
+  else if (id_ranks[e]==0)
+    cout << "b "<<extant_species[e];
+  else
+    cout << "b "<< id_ranks[e];
+  
+  cout << "from " << e << " " << t << " " << endl; 
+  cout << "g_id "<< g_id <<" is " <<ale_pointer->set2name(ale_pointer->id_sets[g_id]) << endl;
+  */
   step max_step=q_step[g_id][t][e];
+
   //cout << max_step.event<<endl;
+  
+  //cout << t << "==0 and " << (int)( tmpset.size() ) << "==1 and " <<e <<" !=-1 "<<endl;
   scalar_type new_branch_length=branch_length+t-max_step.t;
   if (max_step.t!=max_step.t)
     new_branch_length=branch_length;
@@ -810,11 +823,12 @@ string exODT_model::traceback(long int g_id,scalar_type t,scalar_type rank,int e
       branch_string <<":"<<new_branch_length;
       return ale_pointer->set2name(ale_pointer->id_sets[g_id])+branch_string.str();
     }
+  /*
   if (ale_pointer->Bip_counts[g_id]>0)
     new_branch_length=ale_pointer->Bip_bls[g_id]/ale_pointer->Bip_counts[g_id];
   else
     new_branch_length=ale_pointer->Bip_bls[g_id]/ale_pointer->observations;
-
+  */
   if (max_step.event=="D" or max_step.event=="Tb" or max_step.event=="S" or max_step.event=="Sb")
     {
 
@@ -988,6 +1002,7 @@ string exODT_model::traceback(long int g_id,scalar_type t,scalar_type rank,int e
     }
   else
     {
+      cout <<  "me " <<max_step.event << endl;
       cout << "error "  <<endl;
       cout << " g_id " << g_id;
       cout << " t " << t;
@@ -1017,43 +1032,46 @@ string exODT_model::traceback(long int g_id,scalar_type t,scalar_type rank,int e
 
 void exODT_model::register_O(int e)
 {
-  branch_counts["count"][e]+=1;
-  branch_counts["Os"][e]+=1;
+  if (e>-1) branch_counts["count"].at(e)+=1;
+  if (e>-1) branch_counts["Os"].at(e)+=1;
 }
 void exODT_model::register_D(int e)
 {
   MLRec_events["D"]+=1;
-  branch_counts["Ds"][e]+=1;
+  if (e>-1) branch_counts["Ds"].at(e)+=1;
 }
 
 void exODT_model::register_Tto(int e)
 {
   MLRec_events["T"]+=1;
-  branch_counts["Ts"][e]+=1; 
+  if (e>-1) branch_counts["Ts"].at(e)+=1; 
 }
 
 void exODT_model::register_Tfrom(int e)  
 {
-  branch_counts["Tfroms"][e]+=1; 
+  if (e>-1) branch_counts["Tfroms"].at(e)+=1; 
 }
 
 void exODT_model::register_L(int e)
 {
   MLRec_events["L"]+=1;
-  branch_counts["Ls"][e]+=1;
+  if (e>-1) branch_counts["Ls"].at(e)+=1;
 }
 void exODT_model::register_S(int e)
 {
   MLRec_events["S"]+=1;
-  int f=daughters[e][0];
-  int g=daughters[e][1];
-  branch_counts["copies"][e]+=1;
-  branch_counts["count"][f]+=1;
-  branch_counts["count"][g]+=1;  
+  if (e>-1) 
+    {
+      int f=daughters[e][0];
+      int g=daughters[e][1];
+      branch_counts["copies"].at(e)+=1;
+      branch_counts["count"].at(f)+=1;
+      branch_counts["count"].at(g)+=1;  
+    }
 }
 void exODT_model::register_leaf(int e)
 {
-  branch_counts["copies"][e]+=1;
+  if (e>-1) branch_counts["copies"].at(e)+=1;
   //MLRec_events["genes"]+=1;
 }
 

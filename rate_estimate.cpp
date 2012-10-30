@@ -141,7 +141,7 @@ scalar_type mpi_tree::estimate_rates(string mode)
 		    last_counts[count_name][branch]=model->branch_counts[count_name][branch];
 		  }
 		last_MLRec_res.clear();
-		for (int i=0;i< MLRec_res.size(); i++)
+		for (int i=0;i< (int)MLRec_res.size(); i++)
 		  {
 		    last_MLRec_res.push_back(MLRec_res[i]);
 		  }
@@ -193,7 +193,7 @@ scalar_type mpi_tree::estimate_rates(string mode)
 	string count_name=(*it).first;
 	model->branch_counts[count_name][branch]=last_counts[count_name][branch];	
       }
-  for (int i=0;i< MLRec_res.size(); i++)
+  for (int i=0;i< (int)MLRec_res.size(); i++)
     {
       MLRec_res[i]=last_MLRec_res[i];
     }
@@ -383,7 +383,7 @@ void mpi_tree::register_rates()
 
   for (int branch=0;branch<model->last_branch;branch++)	
     {
-      scalar_type t_branch=model->t_end[branch];
+      //scalar_type t_branch=model->t_end[branch];
       scalar_type delta=0;
       scalar_type lambda=0;
       scalar_type tau=0;

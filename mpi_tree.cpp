@@ -382,7 +382,7 @@ scalar_type mpi_tree::calculate_p()
   scalar_type ll=0;
   vector<scalar_type> gather_ll;
 
-  boost::timer * t = new boost::timer();
+  //boost::timer * t = new boost::timer();
   for (int i=0;i<(int)ale_pointers.size();i++)
     {
       //cout << rank <<" at " <<round(i/(float)ale_pointers.size()*100.)<<" %, strats "<< client_fnames[i] << endl;

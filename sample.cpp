@@ -7,7 +7,7 @@ string exODT_model::sample(bool max_rec)
   MLRec_events.clear();
   Ttokens.clear();
   
-  scalar_type beta=1;
+  //scalar_type beta=1;
   scalar_type root_resum=0;
   for (int rank=0;rank<last_rank;rank++)
     {
@@ -91,7 +91,7 @@ string exODT_model::sample(bool max_rec)
 
 string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,int e,scalar_type branch_length,string branch_events, string transfer_token,bool max_rec)
 {
-  scalar_type beta=1;
+  //scalar_type beta=1;
   stringstream topptmp;
   if (e==alpha)
     topptmp<<-1;
@@ -175,10 +175,10 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
   scalar_type resum=0;
   scalar_type t;
 
-  scalar_type t_to=time_slice_times[rank][t_i];
+  //scalar_type t_to=time_slice_times[rank][t_i];
 
-  int rank_to=rank;
-  int t_i_to=t_i; 
+  //int rank_to=rank;
+  //int t_i_to=t_i; 
   bool set_S_node=false;
   // proceed a single "D" subslice
   if(t_i>0)
@@ -230,7 +230,7 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
     {
 
       t=time_slice_times[rank][t_i];
-      scalar_type tpdt,tpdt_nl;      
+      scalar_type tpdt;//,tpdt_nl;      
       if ( t_i < scalar_parameter["D"]-1 )
 	tpdt=time_slice_times[rank][t_i+1];
       else if (rank<last_rank-1)
@@ -239,17 +239,18 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
 	//top of root stem
 	tpdt=t_begin[time_slices[rank][0]];
       //cout << "t= " << t << "; tpdpt= " << tpdt<< " " << rank << " " << last_rank << " " << t_i << " " << scalar_parameter["D"] <<  endl;
-      
+
+      /*
       if (scalar_parameter["event_node"]==1 and 0)
 	tpdt_nl=t;
       else
 	tpdt_nl=tpdt;
-      
+      */
       //root
       scalar_type Delta_t=tpdt-t;
-      scalar_type N=vector_parameter["N"][rank];
+      //scalar_type N=vector_parameter["N"][rank];
       scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
-      scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
+      //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
       //OMG
       //scalar_type p_Delta_bar=1-exp(-Delta_bar/N*Delta_t);			     
       scalar_type p_Delta_bar=Delta_bar*Delta_t;			     
@@ -511,7 +512,7 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
 		      scalar_type Eft=Ee[f][t];
 		      scalar_type Egt=Ee[g][t];
 		      
-		      scalar_type q_sum=0;
+		      //scalar_type q_sum=0;
 		      //q[g_id][t][e]=0;
 		      
 		      scalar_type SL_fLg=q[g_id][t][f]*Egt;
@@ -638,8 +639,8 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
 	    {
 	  //events within slice rank at time t on branch e 
 	  //q[g_id][tpdt][e]=0;
-	  scalar_type q_sum=0;
-	  scalar_type q_sum_nl=0;
+	  //scalar_type q_sum=0;
+	  //scalar_type q_sum_nl=0;
 
 	  //non-leaf directed partition		   
 	  if (not is_a_leaf)
@@ -802,7 +803,7 @@ string exODT_model::sample(bool S_node,long int g_id,int t_i,scalar_type rank,in
       //cout <<" ? i="<< i << " " << sample_steps[i].event << " " << sample_ps[i]/resum << " " << sample_ps[i] <<endl;
     }
   scalar_type max_resum=0;
-  int max_i;
+  int max_i=0;
   for (int i=0;i<(int)sample_ps.size();i++)
     {
       if (max_resum<sample_ps[i])

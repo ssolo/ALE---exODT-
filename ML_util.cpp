@@ -62,7 +62,7 @@ scalar_type tree_LL(string tree,string aln_filename,bool optimize_bls,scalar_typ
 	    ParameterList * parameters= new ParameterList();
 	    parameters->addParameters( tl1->getBranchLengthsParameters());
 	    parameters->addParameters( tl1->getRateDistributionParameters());
-	    unsigned int k = OptimizationTools::optimizeNumericalParameters(
+	    OptimizationTools::optimizeNumericalParameters(
 									     dynamic_cast<DiscreteRatesAcrossSitesTreeLikelihood*>  (tl1),
 									     //tl1->getParameters(),
 									     *parameters,
@@ -179,7 +179,7 @@ pair<string,scalar_type> tree_LL_nucl(string tree,string aln_filename,bool optim
 	    ParameterList * parameters= new ParameterList();
 	    parameters->addParameters( tl1->getBranchLengthsParameters());
 	    parameters->addParameters( tl1->getRateDistributionParameters());
-	    unsigned int k = OptimizationTools::optimizeNumericalParameters(
+	    OptimizationTools::optimizeNumericalParameters(
 									     dynamic_cast<DiscreteRatesAcrossSitesTreeLikelihood*>  (tl1),
 									     //tl1->getParameters(),
 									     *parameters,

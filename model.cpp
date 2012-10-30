@@ -26,12 +26,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
   //cout << ale->set2name(ale->id_sets[tmp_g_id]) <<endl;
   //test  
 
-  //directed partitions and thier sizes
-
   //oMP// 
   //oMP// I sort the directed partitions by size (number of gene tree leaves) to insure that we calculate things in the propoer order
   //oMP// 
 
+  //directed partitions and thier sizes
   vector <long int>  g_ids;//del-loc
   vector <long int>  g_id_sizes;//del-loc  
   for (map <int, vector <long int > > :: iterator it = ale->size_ordered_bips.begin(); it != ale->size_ordered_bips.end(); it++)
@@ -169,16 +168,16 @@ scalar_type exODT_model::p(approx_posterior *ale)
 		//top of root stem
 		tpdt=t_begin[time_slices[rank][0]];
 
-	      if (scalar_parameter["event_node"]==1)
+	      if (scalar_parameter["event_node"]==1 and false)
 		tpdt_nl=t;
 	      else
 		tpdt_nl=tpdt;
 
 	      //root
 	      scalar_type Delta_t=tpdt-t;
-	      scalar_type N=vector_parameter["N"][rank];
+	      //scalar_type N=vector_parameter["N"][rank];
 	      scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
-	      scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
+	      //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
 	      //OMG
 	      //scalar_type p_Delta_bar=1-exp(-Delta_bar/N*Delta_t);			     
 	      scalar_type p_Delta_bar=Delta_bar*Delta_t;			     
@@ -354,6 +353,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
 		      scalar_type q_sum_nl=0;
 
 		      //non-leaf directed partition		   
+
 		      if (not is_a_leaf)
 			for (int i=0;i<N_parts;i++)
 			  {	
