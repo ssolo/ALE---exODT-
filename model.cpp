@@ -96,30 +96,35 @@ scalar_type exODT_model::p(approx_posterior *ale)
         size2i[g_id_sizes[i]].push_back(i);
     }
     
-    std::cout << "HERE "<<std::endl;
     
     /* for (int i=0;i<(int)g_ids.size();i++)
      {*/
+    boost::timer * t = new boost::timer();
+    scalar_type toldest=omp_get_wtime(); 
+    scalar_type told=omp_get_wtime(); 
+
     for (map <int, vector < int > > :: iterator it2 = size2i.begin(); it2 != size2i.end(); it2++) 
     {
      //   std::cout << "HERE 2"<<std::endl;
         int j=0;
-        int i;
         int siz = (int)it2->second.size();
-        #pragma omp parallel private(i)
+#pragma omp parallel 
         {
-        #pragma omp for
+	  //#pragma omp for schedule(dynamic,1)
+#pragma omp single 
+	  {
         for ( j=0 ; j<siz ;j++)
-        {
+	  {
+	    
+	  scalar_type tatom=omp_get_wtime(); 
+
 //            std::cout << "HERE 3"<<std::endl;
         //    std::cout << "j: "<<j<<std::endl;
           //  std::cout << " and it2->first: "<<it2->first << std::endl;
             
            // std::cout << " and : "<< it2->second.at(j) <<std::endl;
-            i = it2->second.at(j);
-            
-            
-            
+            int i = it2->second.at(j);
+	    
             // directed partition (dip) gamma's id  
             bool is_a_leaf=false;
             long int g_id=g_ids[i];	
@@ -131,7 +136,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
             vector <scalar_type> p_part;//del-loc
             if (g_id!=-1)
             {
-#pragma omp critical 
+	      //#pragma omp critical 
                 {
                 for (map< set<long int>,scalar_type> :: iterator kt = ale->Dip_counts[g_id].begin(); kt != ale->Dip_counts[g_id].end(); kt++)
                 {	  
@@ -145,6 +150,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                         p_part.push_back(0);
                     else
                         p_part.push_back(ale->p_dip(g_id,gp_id,gpp_id));
+		    //cout << p_part.size() << " " ;
                 }
                 }
             }
@@ -234,7 +240,8 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     //boundaries for branch alpha virtual branch.  
                     if(1)
                     {
-                        for (int branch_i=0;branch_i<n;branch_i++)
+#pragma omp for schedule(dynamic,1)
+		      for (int branch_i=0;branch_i<n;branch_i++)
                         {	    
                             int e = time_slices[rank][branch_i];
                             
@@ -320,6 +327,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                         }
                         scalar_type q_sum=0;
                         scalar_type q_sum_nl=0;
+#pragma omp for schedule(dynamic,1)
                         for (int branch_i=0;branch_i<n;branch_i++)			  
                         {
                             int e = time_slices[rank][branch_i];		
@@ -364,6 +372,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
 
                         q[g_id][tpdt_nl][alpha]+=q_sum_nl;
                         }
+#pragma omp for schedule(dynamic,1)
                         for (int branch_i=0;branch_i<n;branch_i++)			  
                         {
                             int e = time_slices[rank][branch_i];		
@@ -401,7 +410,8 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     }
                     if(1)
                     {
-                        for (int branch_i=0;branch_i<n;branch_i++)
+#pragma omp for schedule(dynamic,1)
+		      for (int branch_i=0;branch_i<n;branch_i++)
                         {	    
                             int e = time_slices[rank][branch_i];
                             scalar_type Get=Ge[e][t];
@@ -421,7 +431,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             //non-leaf directed partition		   
                             
                             if (not is_a_leaf)
-                                for (int i=0;i<N_parts;i++)
+			      for (int i=0;i<N_parts;i++)
                                 {	
                                     long int gp_id=gp_ids[i];
                                     long int gpp_id=gpp_ids[i];	    
@@ -476,10 +486,20 @@ scalar_type exODT_model::p(approx_posterior *ale)
             gp_ids.clear();
             gpp_ids.clear();
             p_part.clear();
+	scalar_type tnow=omp_get_wtime();//t->elapsed();
+	//cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
+	tatom=tnow;
+
       //  }
+	  }}
+
         }
-        }
+	scalar_type tnow=omp_get_wtime();//t->elapsed();
+	cout << endl << it2->first  << " "<< siz << " "<<tnow-told << " " <<(tnow-told)/siz << endl;
+	told=tnow;
+
     }
+    cout << omp_get_wtime() -toldest<< endl;
   //cout << "end loop" << endl;
   scalar_type root_norm=0;
   for (int rank=0;rank<last_rank;rank++)
