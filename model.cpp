@@ -105,10 +105,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
      //   std::cout << "HERE 2"<<std::endl;
         int j=0;
         int i;
+        int siz = (int)it->second.size();
         #pragma omp parallel private(i)
         {
         #pragma omp for
-        for ( j=0;j<(int)it->second.size();j++)
+        for ( j=0 ; j<siz ;j++)
         {
 //            std::cout << "HERE 3"<<std::endl;
         //    std::cout << "j: "<<j<<std::endl;
@@ -216,8 +217,12 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     
                     //boundaries for branch alpha virtual branch  
                     //boundary at present
-                    if (t==0)
+                    if (t==0) {
+#pragma omp critical 
+                        {
                         q[g_id][t][alpha]=0;
+                    }
+                    }
                     //boundary between slice rank and rank-1 slice is trivial	
                     ;//q[g_id][t][alpha]=q[g_id][t][alpha];	  
                     //boundaries for branch alpha virtual branch.  
@@ -231,10 +236,19 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             //boundary at present
                             if (t==0)
                             {
-                                if (is_a_leaf && extant_species[e]==gid_sps[g_id])			  
+                                if (is_a_leaf && extant_species[e]==gid_sps[g_id]) {	
+#pragma omp critical 
+                                    {
                                     q[g_id][t][e]=1;
-                                else
+                                }
+                                }
+                                else {
+#pragma omp critical 
+                                    {
+
                                     q[g_id][t][e]=0;
+                                    }
+                                }
                             }
                             //boundary between slice rank and rank-1
                             else if (t_i==0)
@@ -272,8 +286,10 @@ scalar_type exODT_model::p(approx_posterior *ale)
                                             //S.
                                             
                                         }
-                                    
+#pragma omp critical 
+                                    {
                                     q[g_id][t][e]=q_sum; 
+                                    }
                                     
                                 }
                                 //branches that cross to next time slice  
@@ -291,7 +307,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     {
                         //events within slice rank at time t on alpha virtual branch
                         scalar_type G_bar=Ge[-1][t];//exp(-(Delta_bar*(n-N)/N+Lambda_bar)*Delta_t );	
+#pragma omp critical 
+                        {
+
                         q[g_id][tpdt][alpha]=0;
+                        }
                         scalar_type q_sum=0;
                         scalar_type q_sum_nl=0;
                         for (int branch_i=0;branch_i<n;branch_i++)			  
@@ -333,9 +353,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
                                 //S_bar.
                                 
                             }	    
-                        
+#pragma omp critical 
+                        {
+
                         q[g_id][tpdt_nl][alpha]+=q_sum_nl;
-                        
+                        }
                         for (int branch_i=0;branch_i<n;branch_i++)			  
                         {
                             int e = time_slices[rank][branch_i];		
@@ -364,8 +386,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
                          }
                          */
                         //max		    
-                        
+#pragma omp critical 
+                        {
+
                         q[g_id][tpdt][alpha]+=q_sum;
+                        }
                         //events within slice rank at time t on alpha virtual branch.
                     }
                     if(1)
@@ -379,7 +404,11 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
                             
                             //events within slice rank at time t on branch e 
+#pragma omp critical 
+                            {
+
                             q[g_id][tpdt][e]=0;
+                            }
                             scalar_type q_sum=0;
                             scalar_type q_sum_nl=0;
                             
@@ -416,18 +445,20 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             
                             //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
                             //SL_bar.
-                            
+#pragma omp critical 
+                            {
                             q[g_id][tpdt_nl][e]+=q_sum_nl;
-                            
+                            }
                             scalar_type empty=Get*q[g_id][t][e];
                             //0 EVENT
                             q_sum+=empty;
                             
                             //q[g_id][tpdt][e]=Get*q[g_id][t][e];
                             //0.
-                            
+#pragma omp critical 
+                            {
                             q[g_id][tpdt][e]+=q_sum;
-                            
+                            }
                             //events within slice rank at time t on branch e. 
                         }
                     }
