@@ -100,12 +100,12 @@ scalar_type exODT_model::p(approx_posterior *ale)
     
     /* for (int i=0;i<(int)g_ids.size();i++)
      {*/
-    for (map <int, vector < int > > :: iterator it = size2i.begin(); it != size2i.end(); it++) 
+    for (map <int, vector < int > > :: iterator it2 = size2i.begin(); it2 != size2i.end(); it2++) 
     {
      //   std::cout << "HERE 2"<<std::endl;
         int j=0;
         int i;
-        int siz = (int)it->second.size();
+        int siz = (int)it2->second.size();
         #pragma omp parallel private(i)
         {
         #pragma omp for
@@ -113,10 +113,10 @@ scalar_type exODT_model::p(approx_posterior *ale)
         {
 //            std::cout << "HERE 3"<<std::endl;
         //    std::cout << "j: "<<j<<std::endl;
-          //  std::cout << " and it->first: "<<it->first << std::endl;
+          //  std::cout << " and it2->first: "<<it2->first << std::endl;
             
-           // std::cout << " and : "<< it->second.at(j) <<std::endl;
-            i = it->second.at(j);
+           // std::cout << " and : "<< it2->second.at(j) <<std::endl;
+            i = it2->second.at(j);
             
             
             
@@ -130,6 +130,9 @@ scalar_type exODT_model::p(approx_posterior *ale)
             vector <long int> gpp_ids;//del-loc
             vector <scalar_type> p_part;//del-loc
             if (g_id!=-1)
+            {
+#pragma omp critical 
+                {
                 for (map< set<long int>,scalar_type> :: iterator kt = ale->Dip_counts[g_id].begin(); kt != ale->Dip_counts[g_id].end(); kt++)
                 {	  
                     vector <long int> parts;
@@ -143,6 +146,8 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     else
                         p_part.push_back(ale->p_dip(g_id,gp_id,gpp_id));
                 }
+                }
+            }
             else
             {
                 //root biprartition needs to be handled seperatly
@@ -178,8 +183,9 @@ scalar_type exODT_model::p(approx_posterior *ale)
                 }
                 bip_parts.clear();
             }
-            int N_parts=gp_ids.size();
             
+            int N_parts=gp_ids.size();
+
             //iterate over all postions along S
             for (int rank=0;rank<last_rank;rank++)
             {
@@ -218,7 +224,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     //boundaries for branch alpha virtual branch  
                     //boundary at present
                     if (t==0) {
-#pragma omp critical 
+//#pragma omp critical 
                         {
                         q[g_id][t][alpha]=0;
                     }
@@ -237,13 +243,13 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             if (t==0)
                             {
                                 if (is_a_leaf && extant_species[e]==gid_sps[g_id]) {	
-#pragma omp critical 
+//#pragma omp critical 
                                     {
                                     q[g_id][t][e]=1;
                                 }
                                 }
                                 else {
-#pragma omp critical 
+//#pragma omp critical 
                                     {
 
                                     q[g_id][t][e]=0;
@@ -286,7 +292,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                                             //S.
                                             
                                         }
-#pragma omp critical 
+//#pragma omp critical 
                                     {
                                     q[g_id][t][e]=q_sum; 
                                     }
@@ -307,7 +313,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     {
                         //events within slice rank at time t on alpha virtual branch
                         scalar_type G_bar=Ge[-1][t];//exp(-(Delta_bar*(n-N)/N+Lambda_bar)*Delta_t );	
-#pragma omp critical 
+//#pragma omp critical 
                         {
 
                         q[g_id][tpdt][alpha]=0;
@@ -353,7 +359,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                                 //S_bar.
                                 
                             }	    
-#pragma omp critical 
+//#pragma omp critical 
                         {
 
                         q[g_id][tpdt_nl][alpha]+=q_sum_nl;
@@ -386,7 +392,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                          }
                          */
                         //max		    
-#pragma omp critical 
+//#pragma omp critical 
                         {
 
                         q[g_id][tpdt][alpha]+=q_sum;
@@ -404,7 +410,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
                             
                             //events within slice rank at time t on branch e 
-#pragma omp critical 
+//#pragma omp critical 
                             {
 
                             q[g_id][tpdt][e]=0;
@@ -445,7 +451,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             
                             //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
                             //SL_bar.
-#pragma omp critical 
+//#pragma omp critical 
                             {
                             q[g_id][tpdt_nl][e]+=q_sum_nl;
                             }
@@ -455,7 +461,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             
                             //q[g_id][tpdt][e]=Get*q[g_id][t][e];
                             //0.
-#pragma omp critical 
+//#pragma omp critical 
                             {
                             q[g_id][tpdt][e]+=q_sum;
                             }
@@ -470,6 +476,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
             gp_ids.clear();
             gpp_ids.clear();
             p_part.clear();
+      //  }
         }
         }
     }
