@@ -108,11 +108,13 @@ scalar_type exODT_model::p(approx_posterior *ale)
      //   std::cout << "HERE 2"<<std::endl;
         int j=0;
         int siz = (int)it2->second.size();
-#pragma omp parallel 
+       // std::cout << siz<<" " << it2->first <<std::endl;
+
+//#pragma omp parallel 
         {
-	  //#pragma omp for schedule(dynamic,1)
-#pragma omp single 
-	  {
+//	  #pragma omp for schedule(dynamic,1)
+//#pragma omp single 
+//	  {
         for ( j=0 ; j<siz ;j++)
 	  {
 	    
@@ -240,7 +242,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     //boundaries for branch alpha virtual branch.  
                     if(1)
                     {
-#pragma omp for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 		      for (int branch_i=0;branch_i<n;branch_i++)
                         {	    
                             int e = time_slices[rank][branch_i];
@@ -327,7 +329,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                         }
                         scalar_type q_sum=0;
                         scalar_type q_sum_nl=0;
-#pragma omp for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum_nl)
                         for (int branch_i=0;branch_i<n;branch_i++)			  
                         {
                             int e = time_slices[rank][branch_i];		
@@ -372,7 +374,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
 
                         q[g_id][tpdt_nl][alpha]+=q_sum_nl;
                         }
-#pragma omp for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum)
                         for (int branch_i=0;branch_i<n;branch_i++)			  
                         {
                             int e = time_slices[rank][branch_i];		
@@ -410,7 +412,8 @@ scalar_type exODT_model::p(approx_posterior *ale)
                     }
                     if(1)
                     {
-#pragma omp for schedule(dynamic,1)
+//DOES PREVENT SEGFAULT
+#pragma omp parallel for schedule(dynamic,1)
 		      for (int branch_i=0;branch_i<n;branch_i++)
                         {	    
                             int e = time_slices[rank][branch_i];
@@ -420,7 +423,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
                             
                             //events within slice rank at time t on branch e 
-//#pragma omp critical 
+#pragma omp critical 
                             {
 
                             q[g_id][tpdt][e]=0;
@@ -461,7 +464,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             
                             //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
                             //SL_bar.
-//#pragma omp critical 
+#pragma omp critical 
                             {
                             q[g_id][tpdt_nl][e]+=q_sum_nl;
                             }
@@ -471,7 +474,7 @@ scalar_type exODT_model::p(approx_posterior *ale)
                             
                             //q[g_id][tpdt][e]=Get*q[g_id][t][e];
                             //0.
-//#pragma omp critical 
+#pragma omp critical 
                             {
                             q[g_id][tpdt][e]+=q_sum;
                             }
@@ -487,13 +490,14 @@ scalar_type exODT_model::p(approx_posterior *ale)
             gpp_ids.clear();
             p_part.clear();
 	scalar_type tnow=omp_get_wtime();//t->elapsed();
-	//cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
+	cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
 	tatom=tnow;
 
       //  }
-	  }}
+	  }
+    }
 
-        }
+      //  }
 	scalar_type tnow=omp_get_wtime();//t->elapsed();
 	cout << endl << it2->first  << " "<< siz << " "<<tnow-told << " " <<(tnow-told)/siz << endl;
 	told=tnow;
