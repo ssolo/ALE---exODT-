@@ -109,395 +109,813 @@ scalar_type exODT_model::p(approx_posterior *ale)
         int j=0;
         int siz = (int)it2->second.size();
        // std::cout << siz<<" " << it2->first <<std::endl;
-
+ if (siz < omp_get_num_threads()) //If few cases: inside loop parallelization
+ {
 //#pragma omp parallel 
-        {
-//	  #pragma omp for schedule(dynamic,1)
-//#pragma omp single 
-//	  {
-        for ( j=0 ; j<siz ;j++)
-	  {
-	    
-	  scalar_type tatom=omp_get_wtime(); 
-
-//            std::cout << "HERE 3"<<std::endl;
-        //    std::cout << "j: "<<j<<std::endl;
-          //  std::cout << " and it2->first: "<<it2->first << std::endl;
-            
-           // std::cout << " and : "<< it2->second.at(j) <<std::endl;
-            int i = it2->second.at(j);
-	    
-            // directed partition (dip) gamma's id  
-            bool is_a_leaf=false;
-            long int g_id=g_ids[i];	
-            if (g_id_sizes[i]==1)
-                is_a_leaf=true;
-            
-            vector <long int> gp_ids;//del-loc
-            vector <long int> gpp_ids;//del-loc
-            vector <scalar_type> p_part;//del-loc
-            if (g_id!=-1)
-            {
-	      //#pragma omp critical 
-                {
-                for (map< set<long int>,scalar_type> :: iterator kt = ale->Dip_counts[g_id].begin(); kt != ale->Dip_counts[g_id].end(); kt++)
-                {	  
-                    vector <long int> parts;
-                    for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
-                    long int gp_id=parts[0];
-                    long int gpp_id=parts[1];	    
-                    gp_ids.push_back(gp_id);
-                    gpp_ids.push_back(gpp_id);
-                    if (ale->Bip_counts[g_id]<=scalar_parameter["min_bip_count"])
-                        p_part.push_back(0);
-                    else
-                        p_part.push_back(ale->p_dip(g_id,gp_id,gpp_id));
-		    //cout << p_part.size() << " " ;
-                }
-                }
-            }
-            else
-            {
-                //root biprartition needs to be handled seperatly
-                map<set<long int>,int> bip_parts;
-                for (map <long int,scalar_type> :: iterator it = ale->Bip_counts.begin(); it != ale->Bip_counts.end(); it++)
-                {
-                    long int gp_id=(*it).first;
-                    set <int> gamma=ale->id_sets[gp_id];
-                    set <int> not_gamma;
-                    for (set<int>::iterator st=ale->Gamma.begin();st!=ale->Gamma.end();st++)
-                        if (gamma.count(*st)==0)
-                            not_gamma.insert(*st);
-                    long int gpp_id = ale->set_ids[not_gamma];
-                    set <long int> parts;
-                    parts.insert(gp_id);
-                    parts.insert(gpp_id);
-                    bip_parts[parts]=1;
-                    gamma.clear();
-                    not_gamma.clear();
-                }
-                for (map<set<long int>,int> :: iterator kt = bip_parts.begin();kt!=bip_parts.end();kt++)
-                {
-                    vector <long int> parts;
-                    for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
-                    long int gp_id=parts[0];
-                    long int gpp_id=parts[1];	    
-                    gp_ids.push_back(gp_id);
-                    gpp_ids.push_back(gpp_id);
-                    if (ale->Bip_counts[gp_id]<=scalar_parameter["min_bip_count"] and not ale->Gamma_size<4)
-                        p_part.push_back(0);	      
-                    else
-                        p_part.push_back(ale->p_bip(gp_id));	      
-                }
-                bip_parts.clear();
-            }
-            
-            int N_parts=gp_ids.size();
-
-            //iterate over all postions along S
-            for (int rank=0;rank<last_rank;rank++)
-            {
-                int n=time_slices[rank].size();
-                for (int t_i=0;t_i<(int)time_slice_times[rank].size();t_i++)
-                {
-                    //######################################################################################################################
-                    //#########################################INNNER LOOP##################################################################
-                    //######################################################################################################################
-                    
-                    scalar_type t=time_slice_times[rank][t_i];
-                    scalar_type tpdt,tpdt_nl;
-                    if ( t_i < scalar_parameter["D"]-1 )
-                        tpdt=time_slice_times[rank][t_i+1];
-                    else if (rank<last_rank-1)
-                        tpdt=time_slice_times[rank+1][0];
-                    else
-                        //top of root stem
-                        tpdt=t_begin[time_slices[rank][0]];
-                    
-                    if (scalar_parameter["event_node"]==1 and false)
-                        tpdt_nl=t;
-                    else
-                        tpdt_nl=tpdt;
-                    
-                    //root
-                    scalar_type Delta_t=tpdt-t;
-                    //scalar_type N=vector_parameter["N"][rank];
-                    scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
-                    //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
-                    //OMG
-                    //scalar_type p_Delta_bar=1-exp(-Delta_bar/N*Delta_t);			     
-                    scalar_type p_Delta_bar=Delta_bar*Delta_t;			     
-                    scalar_type Ebar=Ee[-1][t];
-                    
-                    //boundaries for branch alpha virtual branch  
-                    //boundary at present
-                    if (t==0) {
+     {
+//#pragma omp for schedule(dynamic,1) 
+         //#pragma omp single 
+         //{
+         for ( j=0 ; j<siz ;j++)
+         {
+             
+             scalar_type tatom=omp_get_wtime(); 
+             
+             //            std::cout << "HERE 3"<<std::endl;
+             //    std::cout << "j: "<<j<<std::endl;
+             //  std::cout << " and it2->first: "<<it2->first << std::endl;
+             
+             // std::cout << " and : "<< it2->second.at(j) <<std::endl;
+             int i = it2->second.at(j);
+             
+             // directed partition (dip) gamma's id  
+             bool is_a_leaf=false;
+             long int g_id=g_ids[i];	
+             if (g_id_sizes[i]==1)
+                 is_a_leaf=true;
+             
+             vector <long int> gp_ids;//del-loc
+             vector <long int> gpp_ids;//del-loc
+             vector <scalar_type> p_part;//del-loc
+             if (g_id!=-1)
+             {
 //#pragma omp critical 
-                        {
-                        q[g_id][t][alpha]=0;
-                    }
-                    }
-                    //boundary between slice rank and rank-1 slice is trivial	
-                    ;//q[g_id][t][alpha]=q[g_id][t][alpha];	  
-                    //boundaries for branch alpha virtual branch.  
-                    if(1)
-                    {
-#pragma omp parallel for schedule(dynamic,1)
-		      for (int branch_i=0;branch_i<n;branch_i++)
-                        {	    
-                            int e = time_slices[rank][branch_i];
-                            
-                            //boundaries for branch e
-                            //boundary at present
-                            if (t==0)
-                            {
-                                if (is_a_leaf && extant_species[e]==gid_sps[g_id]) {	
-//#pragma omp critical 
-                                    {
-                                    q[g_id][t][e]=1;
-                                }
-                                }
-                                else {
-//#pragma omp critical 
-                                    {
-
-                                    q[g_id][t][e]=0;
-                                    }
-                                }
-                            }
-                            //boundary between slice rank and rank-1
-                            else if (t_i==0)
-                            {
-                                //terminating branch is last in time_slices and defines a represented speciation 
-                                if (branch_i==n-1 && rank>0)
-                                {
-                                    int f=daughters[e][0];
-                                    int g=daughters[e][1];
-                                    scalar_type Eft=Ee[f][t];
-                                    scalar_type Egt=Ee[g][t];
-                                    
-                                    scalar_type q_sum=0;
-                                    //q[g_id][t][e]=0;
-                                    
-                                    scalar_type SL_fLg=q[g_id][t][f]*Egt;
-                                    scalar_type SL_Lfg=q[g_id][t][g]*Eft;
-                                    //SL EVENT
-                                    q_sum+=SL_fLg+SL_Lfg;
-                                    //q[g_id][t][e]=q[g_id][t][f]*Egt + q[g_id][t][g]*Eft;
-                                    //SL.
-                                    
-                                    //non-leaf directed partition
-                                    if (not is_a_leaf)
-                                        for (int i=0;i<N_parts;i++)
-                                        {	
-                                            long int gp_id=gp_ids[i];
-                                            long int gpp_id=gpp_ids[i];	    
-                                            scalar_type pp=p_part[i];
-                                            scalar_type S_pf_ppg=q[gp_id][t][f]*q[gpp_id][t][g]*pp;
-                                            scalar_type S_ppf_pg=q[gpp_id][t][f]*q[gp_id][t][g]*pp;
-                                            //S EVENT
-                                            //q[g_id][t][e]+=q[gp_id][t][f]*q[gpp_id][t][g] +q[gpp_id][t][f]*q[gp_id][t][g];
-                                            q_sum+= S_pf_ppg + S_ppf_pg;
-                                            //S.
-                                            
-                                        }
-//#pragma omp critical 
-                                    {
-                                    q[g_id][t][e]=q_sum; 
-                                    }
-                                    
-                                }
-                                //branches that cross to next time slice  
-                                else
-                                {
-                                    //trivial
-                                    ;//q[g_id][t][e]=q[g_id][t][e];
-                                }			  
-                            }		   
-                            //boundaries for branch e.
-                        }
-                    }
-                    
-                    if(1)
-                    {
-                        //events within slice rank at time t on alpha virtual branch
-                        scalar_type G_bar=Ge[-1][t];//exp(-(Delta_bar*(n-N)/N+Lambda_bar)*Delta_t );	
-//#pragma omp critical 
-                        {
-
-                        q[g_id][tpdt][alpha]=0;
-                        }
-                        scalar_type q_sum=0;
-                        scalar_type q_sum_nl=0;
-#pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum_nl)
-                        for (int branch_i=0;branch_i<n;branch_i++)			  
-                        {
-                            int e = time_slices[rank][branch_i];		
-                            scalar_type tau_e=vector_parameter["tau"][e];
-                            //G_bar*=exp(- tau_e*Delta_t);
-                            
-                            //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
-                            //OMG
-                            scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
-                            //non-leaf directed partition
-                            if (not is_a_leaf)
-                                for (int i=0;i<N_parts;i++)
-                                {	
-                                    long int gp_id=gp_ids[i];
-                                    long int gpp_id=gpp_ids[i];	    
-                                    scalar_type pp=p_part[i];				    
-                                    scalar_type T_ep_app=p_Ntau_e*q[gp_id][t][e]*q[gpp_id][t][alpha]*pp;
-                                    scalar_type T_ap_epp=p_Ntau_e*q[gp_id][t][alpha]*q[gpp_id][t][e]*pp;
-                                    //T EVENT
-                                    q_sum_nl+=T_ep_app+T_ap_epp;
-                                    //q[g_id][tpdt][alpha]+=p_Ntau_e*(q[gp_id][t][e]*q[gpp_id][t][alpha]+q[gp_id][t][alpha]*q[gpp_id][t][e]);
-                                    //T.
-                                    
-                                }
-                        }
-                        //non-leaf directed partition
-                        if (not is_a_leaf)
-                            for (int i=0;i<N_parts;i++)
-                            {	
-                                long int gp_id=gp_ids[i];
-                                long int gpp_id=gpp_ids[i];	    
-                                scalar_type pp=p_part[i];
-                                scalar_type Sb=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha])*pp;
-                                //S_bar EVENT
-                                q_sum_nl+=Sb;
-                                //q[g_id][tpdt][alpha]+=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha]);
-                                //S_bar.
-                                
-                            }	    
-//#pragma omp critical 
-                        {
-
-                        q[g_id][tpdt_nl][alpha]+=q_sum_nl;
-                        }
-#pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum)
-                        for (int branch_i=0;branch_i<n;branch_i++)			  
-                        {
-                            int e = time_slices[rank][branch_i];		
-                            scalar_type tau_e=vector_parameter["tau"][e];
-                            //OMG
-                            //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
-                            scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
-                            scalar_type TLb=p_Ntau_e*Ebar*q[g_id][t][e];
-                            //TL_bar EVENT
-                            q_sum+=TLb;
-                            //q[g_id][tpdt][alpha]+=p_Ntau_e*Ebar*q[g_id][t][e];
-                            //TL_bar.
-                            
-                        }
-                        //0 EVENT
-                        scalar_type empty=G_bar*q[g_id][t][alpha]; 
-                        q_sum+=empty;
-                        
-                        //q[g_id][tpdt][alpha]+=G_bar*q[g_id][t][alpha];
-                        //0.
-                        //max
-                        /*
-                         if (max_term<empty) 
+                 {
+                     for (map< set<long int>,scalar_type> :: iterator kt = ale->Dip_counts[g_id].begin(); kt != ale->Dip_counts[g_id].end(); kt++)
+                     {	  
+                         vector <long int> parts;
+                         for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
+                         long int gp_id=parts[0];
+                         long int gpp_id=parts[1];	    
+                         gp_ids.push_back(gp_id);
+                         gpp_ids.push_back(gpp_id);
+                         if (ale->Bip_counts[g_id]<=scalar_parameter["min_bip_count"])
+                             p_part.push_back(0);
+                         else
+                             p_part.push_back(ale->p_dip(g_id,gp_id,gpp_id));
+                         //cout << p_part.size() << " " ;
+                     }
+                 }
+             }
+             else
+             {
+                 //root biprartition needs to be handled seperatly
+                 map<set<long int>,int> bip_parts;
+                 for (map <long int,scalar_type> :: iterator it = ale->Bip_counts.begin(); it != ale->Bip_counts.end(); it++)
+                 {
+                     long int gp_id=(*it).first;
+                     set <int> gamma=ale->id_sets[gp_id];
+                     set <int> not_gamma;
+                     for (set<int>::iterator st=ale->Gamma.begin();st!=ale->Gamma.end();st++)
+                         if (gamma.count(*st)==0)
+                             not_gamma.insert(*st);
+                     long int gpp_id = ale->set_ids[not_gamma];
+                     set <long int> parts;
+                     parts.insert(gp_id);
+                     parts.insert(gpp_id);
+                     bip_parts[parts]=1;
+                     gamma.clear();
+                     not_gamma.clear();
+                 }
+                 for (map<set<long int>,int> :: iterator kt = bip_parts.begin();kt!=bip_parts.end();kt++)
+                 {
+                     vector <long int> parts;
+                     for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
+                     long int gp_id=parts[0];
+                     long int gpp_id=parts[1];	    
+                     gp_ids.push_back(gp_id);
+                     gpp_ids.push_back(gpp_id);
+                     if (ale->Bip_counts[gp_id]<=scalar_parameter["min_bip_count"] and not ale->Gamma_size<4)
+                         p_part.push_back(0);	      
+                     else
+                         p_part.push_back(ale->p_bip(gp_id));	      
+                 }
+                 bip_parts.clear();
+             }
+             
+             int N_parts=gp_ids.size();
+             
+             //iterate over all postions along S
+             for (int rank=0;rank<last_rank;rank++)
+             {
+                 int n=time_slices[rank].size();
+                 for (int t_i=0;t_i<(int)time_slice_times[rank].size();t_i++)
+                 {
+                     //######################################################################################################################
+                     //#########################################INNNER LOOP##################################################################
+                     //######################################################################################################################
+                     
+                     scalar_type t=time_slice_times[rank][t_i];
+                     scalar_type tpdt,tpdt_nl;
+                     if ( t_i < scalar_parameter["D"]-1 )
+                         tpdt=time_slice_times[rank][t_i+1];
+                     else if (rank<last_rank-1)
+                         tpdt=time_slice_times[rank+1][0];
+                     else
+                         //top of root stem
+                         tpdt=t_begin[time_slices[rank][0]];
+                     
+                     if (scalar_parameter["event_node"]==1 and false)
+                         tpdt_nl=t;
+                     else
+                         tpdt_nl=tpdt;
+                     
+                     //root
+                     scalar_type Delta_t=tpdt-t;
+                     //scalar_type N=vector_parameter["N"][rank];
+                     scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
+                     //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
+                     //OMG
+                     //scalar_type p_Delta_bar=1-exp(-Delta_bar/N*Delta_t);			     
+                     scalar_type p_Delta_bar=Delta_bar*Delta_t;			     
+                     scalar_type Ebar=Ee[-1][t];
+                     
+                     //boundaries for branch alpha virtual branch  
+                     //boundary at present
+                     if (t==0) {
+                         //#pragma omp critical 
                          {
-                         max_term=empty;
+                             q[g_id][t][alpha]=0;
                          }
-                         */
-                        //max		    
+                     }
+                     //boundary between slice rank and rank-1 slice is trivial	
+                     ;//q[g_id][t][alpha]=q[g_id][t][alpha];	  
+                     //boundaries for branch alpha virtual branch.  
+                     if(1)
+                     {
+                         #pragma omp parallel for schedule(dynamic,1)
+//#pragma omp task untied          
+                         for (int branch_i=0;branch_i<n;branch_i++)
+                         {	  
+//#pragma omp task
+                             {
+                                 int e = time_slices[rank][branch_i];
+                                 
+                                 //boundaries for branch e
+                                 //boundary at present
+                                 if (t==0)
+                                 {
+                                     if (is_a_leaf && extant_species[e]==gid_sps[g_id]) {	
+                                         //#pragma omp critical 
+                                         {
+                                             q[g_id][t][e]=1;
+                                         }
+                                     }
+                                     else {
+                                         //#pragma omp critical 
+                                         {
+                                             
+                                             q[g_id][t][e]=0;
+                                         }
+                                     }
+                                 }
+                                 //boundary between slice rank and rank-1
+                                 else if (t_i==0)
+                                 {
+                                     //terminating branch is last in time_slices and defines a represented speciation 
+                                     if (branch_i==n-1 && rank>0)
+                                     {
+                                         int f=daughters[e][0];
+                                         int g=daughters[e][1];
+                                         scalar_type Eft=Ee[f][t];
+                                         scalar_type Egt=Ee[g][t];
+                                         
+                                         scalar_type q_sum=0;
+                                         //q[g_id][t][e]=0;
+                                         
+                                         scalar_type SL_fLg=q[g_id][t][f]*Egt;
+                                         scalar_type SL_Lfg=q[g_id][t][g]*Eft;
+                                         //SL EVENT
+                                         q_sum+=SL_fLg+SL_Lfg;
+                                         //q[g_id][t][e]=q[g_id][t][f]*Egt + q[g_id][t][g]*Eft;
+                                         //SL.
+                                         
+                                         //non-leaf directed partition
+                                         if (not is_a_leaf)
+                                             for (int i=0;i<N_parts;i++)
+                                             {	
+                                                 long int gp_id=gp_ids[i];
+                                                 long int gpp_id=gpp_ids[i];	    
+                                                 scalar_type pp=p_part[i];
+                                                 scalar_type S_pf_ppg=q[gp_id][t][f]*q[gpp_id][t][g]*pp;
+                                                 scalar_type S_ppf_pg=q[gpp_id][t][f]*q[gp_id][t][g]*pp;
+                                                 //S EVENT
+                                                 //q[g_id][t][e]+=q[gp_id][t][f]*q[gpp_id][t][g] +q[gpp_id][t][f]*q[gp_id][t][g];
+                                                 q_sum+= S_pf_ppg + S_ppf_pg;
+                                                 //S.
+                                                 
+                                             }
+                                         //#pragma omp critical 
+                                         {
+                                             q[g_id][t][e]=q_sum; 
+                                         }
+                                         
+                                     }
+                                     //branches that cross to next time slice  
+                                     else
+                                     {
+                                         //trivial
+                                         ;//q[g_id][t][e]=q[g_id][t][e];
+                                     }			  
+                                 }		   
+                                 //boundaries for branch e.
+                             }
+                         }
+                     }
+                     
+                     if(1)
+                     {
+                         //events within slice rank at time t on alpha virtual branch
+                         scalar_type G_bar=Ge[-1][t];//exp(-(Delta_bar*(n-N)/N+Lambda_bar)*Delta_t );	
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt][alpha]=0;
+                         }
+                         scalar_type q_sum=0;
+                         scalar_type q_sum_nl=0;
+                         #pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum_nl)
+//#pragma omp task untied
+                         for (int branch_i=0;branch_i<n;branch_i++)			  
+                         {
+//#pragma omp task
+                             {
+                                 int e = time_slices[rank][branch_i];		
+                                 scalar_type tau_e=vector_parameter["tau"][e];
+                                 //G_bar*=exp(- tau_e*Delta_t);
+                                 
+                                 //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
+                                 //OMG
+                                 scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
+                                 //non-leaf directed partition
+                                 if (not is_a_leaf)
+                                     for (int i=0;i<N_parts;i++)
+                                     {	
+                                         long int gp_id=gp_ids[i];
+                                         long int gpp_id=gpp_ids[i];	    
+                                         scalar_type pp=p_part[i];				    
+                                         scalar_type T_ep_app=p_Ntau_e*q[gp_id][t][e]*q[gpp_id][t][alpha]*pp;
+                                         scalar_type T_ap_epp=p_Ntau_e*q[gp_id][t][alpha]*q[gpp_id][t][e]*pp;
+                                         //T EVENT
+                                         q_sum_nl+=T_ep_app+T_ap_epp;
+                                         //q[g_id][tpdt][alpha]+=p_Ntau_e*(q[gp_id][t][e]*q[gpp_id][t][alpha]+q[gp_id][t][alpha]*q[gpp_id][t][e]);
+                                         //T.
+                                         
+                                     }
+                             }
+                         }
+                         //non-leaf directed partition
+                         if (not is_a_leaf)
+                             for (int i=0;i<N_parts;i++)
+                             {	
+                                 long int gp_id=gp_ids[i];
+                                 long int gpp_id=gpp_ids[i];	    
+                                 scalar_type pp=p_part[i];
+                                 scalar_type Sb=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha])*pp;
+                                 //S_bar EVENT
+                                 q_sum_nl+=Sb;
+                                 //q[g_id][tpdt][alpha]+=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha]);
+                                 //S_bar.
+                                 
+                             }	    
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt_nl][alpha]+=q_sum_nl;
+                         }
+                         #pragma omp parallel for schedule(dynamic,1)  reduction(+:q_sum)
+//#pragma omp task untied 
+                         for (int branch_i=0;branch_i<n;branch_i++)			  
+                         {
+//#pragma omp task
+                             {
+                                 
+                                 int e = time_slices[rank][branch_i];		
+                                 scalar_type tau_e=vector_parameter["tau"][e];
+                                 //OMG
+                                 //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
+                                 scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
+                                 scalar_type TLb=p_Ntau_e*Ebar*q[g_id][t][e];
+                                 //TL_bar EVENT
+                                 q_sum+=TLb;
+                                 //q[g_id][tpdt][alpha]+=p_Ntau_e*Ebar*q[g_id][t][e];
+                                 //TL_bar.
+                             }
+                         }
+                         //0 EVENT
+                         scalar_type empty=G_bar*q[g_id][t][alpha]; 
+                         q_sum+=empty;
+                         
+                         //q[g_id][tpdt][alpha]+=G_bar*q[g_id][t][alpha];
+                         //0.
+                         //max
+                         /*
+                          if (max_term<empty) 
+                          {
+                          max_term=empty;
+                          }
+                          */
+                         //max		    
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt][alpha]+=q_sum;
+                         }
+                         //events within slice rank at time t on alpha virtual branch.
+                     }
+                     if(1)
+                     {
+                         //DOES PREVENT SEGFAULT
+                         #pragma omp parallel for schedule(dynamic,1)
+//#pragma omp task untied 
+                         for (int branch_i=0;branch_i<n;branch_i++)
+                         {	
+//#pragma omp task
+                             {
+                                 
+                                 int e = time_slices[rank][branch_i];
+                                 scalar_type Get=Ge[e][t];
+                                 scalar_type Eet=Ee[e][t];	
+                                 scalar_type delta_e=vector_parameter["delta"][e];
+                                 scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
+                                 
+                                 //events within slice rank at time t on branch e 
+#pragma omp critical 
+                                 {
+                                     
+                                     q[g_id][tpdt][e]=0;
+                                 }
+                                 scalar_type q_sum=0;
+                                 scalar_type q_sum_nl=0;
+                                 
+                                 //non-leaf directed partition		   
+                                 
+                                 if (not is_a_leaf)
+                                     for (int i=0;i<N_parts;i++)
+                                     {	
+                                         long int gp_id=gp_ids[i];
+                                         long int gpp_id=gpp_ids[i];	    
+                                         scalar_type pp=p_part[i];
+                                         scalar_type qpe=q[gp_id][t][e];
+                                         scalar_type qppe=q[gpp_id][t][e];
+                                         scalar_type Sb_pa_ppe= p_Delta_bar*q[gp_id][t][alpha]*qppe*pp;
+                                         scalar_type Sb_pe_ppa= p_Delta_bar*qpe*q[gpp_id][t][alpha]*pp;
+                                         //S_bar EVENT
+                                         q_sum_nl+= Sb_pa_ppe + Sb_pe_ppa;
+                                         
+                                         //q[g_id][tpdt][e]+=p_Delta_bar*(q[gp_id][t][alpha]*q[gpp_id][t][e]+q[gp_id][t][e]*q[gpp_id][t][alpha]);			  
+                                         //S_bar.
+                                         
+                                         scalar_type D=p_delta_e*qpe*qppe*pp;
+                                         //D EVENT
+                                         q_sum_nl+= D;
+                                         
+                                         //q[g_id][tpdt][e]+=p_delta_e*q[gp_id][t][e]*q[gpp_id][t][e];
+                                         //D.
+                                         
+                                     }
+                                 
+                                 scalar_type SLb=p_Delta_bar*Eet*q[g_id][t][alpha];
+                                 //SL_bar EVENT
+                                 q_sum_nl+=SLb;
+                                 
+                                 //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
+                                 //SL_bar.
+#pragma omp critical 
+                                 {
+                                     q[g_id][tpdt_nl][e]+=q_sum_nl;
+                                 }
+                                 scalar_type empty=Get*q[g_id][t][e];
+                                 //0 EVENT
+                                 q_sum+=empty;
+                                 
+                                 //q[g_id][tpdt][e]=Get*q[g_id][t][e];
+                                 //0.
+#pragma omp critical 
+                                 {
+                                     q[g_id][tpdt][e]+=q_sum;
+                                 }
+                                 //events within slice rank at time t on branch e.
+                             }
+                         }
+                     }
+                     //######################################################################################################################
+                     //#########################################INNNER LOOP##################################################################
+                     //######################################################################################################################		    
+                 }
+             }
+             gp_ids.clear();
+             gpp_ids.clear();
+             p_part.clear();
+             scalar_type tnow=omp_get_wtime();//t->elapsed();
+             cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
+             tatom=tnow;
+             
+             //  }
+             //}
+         }
+         
+     }
+ }
+ else { ////If more cases than number of threads: outside loop parallelization
+#pragma omp parallel 
+     {
+#pragma omp for schedule(dynamic,1) 
+         //#pragma omp single 
+         //{
+         for ( j=0 ; j<siz ;j++)
+         {
+             
+             scalar_type tatom=omp_get_wtime(); 
+             
+             //            std::cout << "HERE 3"<<std::endl;
+             //    std::cout << "j: "<<j<<std::endl;
+             //  std::cout << " and it2->first: "<<it2->first << std::endl;
+             
+             // std::cout << " and : "<< it2->second.at(j) <<std::endl;
+             int i = it2->second.at(j);
+             
+             // directed partition (dip) gamma's id  
+             bool is_a_leaf=false;
+             long int g_id=g_ids[i];	
+             if (g_id_sizes[i]==1)
+                 is_a_leaf=true;
+             
+             vector <long int> gp_ids;//del-loc
+             vector <long int> gpp_ids;//del-loc
+             vector <scalar_type> p_part;//del-loc
+             if (g_id!=-1)
+             {
+#pragma omp critical 
+                 {
+                     for (map< set<long int>,scalar_type> :: iterator kt = ale->Dip_counts[g_id].begin(); kt != ale->Dip_counts[g_id].end(); kt++)
+                     {	  
+                         vector <long int> parts;
+                         for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
+                         long int gp_id=parts[0];
+                         long int gpp_id=parts[1];	    
+                         gp_ids.push_back(gp_id);
+                         gpp_ids.push_back(gpp_id);
+                         if (ale->Bip_counts[g_id]<=scalar_parameter["min_bip_count"])
+                             p_part.push_back(0);
+                         else
+                             p_part.push_back(ale->p_dip(g_id,gp_id,gpp_id));
+                         //cout << p_part.size() << " " ;
+                     }
+                 }
+             }
+             else
+             {
+                 //root biprartition needs to be handled seperatly
+                 map<set<long int>,int> bip_parts;
+                 for (map <long int,scalar_type> :: iterator it = ale->Bip_counts.begin(); it != ale->Bip_counts.end(); it++)
+                 {
+                     long int gp_id=(*it).first;
+                     set <int> gamma=ale->id_sets[gp_id];
+                     set <int> not_gamma;
+                     for (set<int>::iterator st=ale->Gamma.begin();st!=ale->Gamma.end();st++)
+                         if (gamma.count(*st)==0)
+                             not_gamma.insert(*st);
+                     long int gpp_id = ale->set_ids[not_gamma];
+                     set <long int> parts;
+                     parts.insert(gp_id);
+                     parts.insert(gpp_id);
+                     bip_parts[parts]=1;
+                     gamma.clear();
+                     not_gamma.clear();
+                 }
+                 for (map<set<long int>,int> :: iterator kt = bip_parts.begin();kt!=bip_parts.end();kt++)
+                 {
+                     vector <long int> parts;
+                     for (set<long int>::iterator sit=(*kt).first.begin();sit!=(*kt).first.end();sit++) parts.push_back((*sit));
+                     long int gp_id=parts[0];
+                     long int gpp_id=parts[1];	    
+                     gp_ids.push_back(gp_id);
+                     gpp_ids.push_back(gpp_id);
+                     if (ale->Bip_counts[gp_id]<=scalar_parameter["min_bip_count"] and not ale->Gamma_size<4)
+                         p_part.push_back(0);	      
+                     else
+                         p_part.push_back(ale->p_bip(gp_id));	      
+                 }
+                 bip_parts.clear();
+             }
+             
+             int N_parts=gp_ids.size();
+             
+             //iterate over all postions along S
+             for (int rank=0;rank<last_rank;rank++)
+             {
+                 int n=time_slices[rank].size();
+                 for (int t_i=0;t_i<(int)time_slice_times[rank].size();t_i++)
+                 {
+                     //######################################################################################################################
+                     //#########################################INNNER LOOP##################################################################
+                     //######################################################################################################################
+                     
+                     scalar_type t=time_slice_times[rank][t_i];
+                     scalar_type tpdt,tpdt_nl;
+                     if ( t_i < scalar_parameter["D"]-1 )
+                         tpdt=time_slice_times[rank][t_i+1];
+                     else if (rank<last_rank-1)
+                         tpdt=time_slice_times[rank+1][0];
+                     else
+                         //top of root stem
+                         tpdt=t_begin[time_slices[rank][0]];
+                     
+                     if (scalar_parameter["event_node"]==1 and false)
+                         tpdt_nl=t;
+                     else
+                         tpdt_nl=tpdt;
+                     
+                     //root
+                     scalar_type Delta_t=tpdt-t;
+                     //scalar_type N=vector_parameter["N"][rank];
+                     scalar_type Delta_bar=vector_parameter["Delta_bar"][rank];
+                     //scalar_type Lambda_bar=vector_parameter["Lambda_bar"][rank];
+                     //OMG
+                     //scalar_type p_Delta_bar=1-exp(-Delta_bar/N*Delta_t);			     
+                     scalar_type p_Delta_bar=Delta_bar*Delta_t;			     
+                     scalar_type Ebar=Ee[-1][t];
+                     
+                     //boundaries for branch alpha virtual branch  
+                     //boundary at present
+                     if (t==0) {
+                         //#pragma omp critical 
+                         {
+                             q[g_id][t][alpha]=0;
+                         }
+                     }
+                     //boundary between slice rank and rank-1 slice is trivial	
+                     ;//q[g_id][t][alpha]=q[g_id][t][alpha];	  
+                     //boundaries for branch alpha virtual branch.  
+                     if(1)
+                     {
+                         //#pragma omp parallel for schedule(dynamic,1)
+                         for (int branch_i=0;branch_i<n;branch_i++)
+                         {	  
+                             {
+                                 int e = time_slices[rank][branch_i];
+                                 
+                                 //boundaries for branch e
+                                 //boundary at present
+                                 if (t==0)
+                                 {
+                                     if (is_a_leaf && extant_species[e]==gid_sps[g_id]) {	
+                                         //#pragma omp critical 
+                                         {
+                                             q[g_id][t][e]=1;
+                                         }
+                                     }
+                                     else {
+                                         //#pragma omp critical 
+                                         {
+                                             
+                                             q[g_id][t][e]=0;
+                                         }
+                                     }
+                                 }
+                                 //boundary between slice rank and rank-1
+                                 else if (t_i==0)
+                                 {
+                                     //terminating branch is last in time_slices and defines a represented speciation 
+                                     if (branch_i==n-1 && rank>0)
+                                     {
+                                         int f=daughters[e][0];
+                                         int g=daughters[e][1];
+                                         scalar_type Eft=Ee[f][t];
+                                         scalar_type Egt=Ee[g][t];
+                                         
+                                         scalar_type q_sum=0;
+                                         //q[g_id][t][e]=0;
+                                         
+                                         scalar_type SL_fLg=q[g_id][t][f]*Egt;
+                                         scalar_type SL_Lfg=q[g_id][t][g]*Eft;
+                                         //SL EVENT
+                                         q_sum+=SL_fLg+SL_Lfg;
+                                         //q[g_id][t][e]=q[g_id][t][f]*Egt + q[g_id][t][g]*Eft;
+                                         //SL.
+                                         
+                                         //non-leaf directed partition
+                                         if (not is_a_leaf)
+                                             for (int i=0;i<N_parts;i++)
+                                             {	
+                                                 long int gp_id=gp_ids[i];
+                                                 long int gpp_id=gpp_ids[i];	    
+                                                 scalar_type pp=p_part[i];
+                                                 scalar_type S_pf_ppg=q[gp_id][t][f]*q[gpp_id][t][g]*pp;
+                                                 scalar_type S_ppf_pg=q[gpp_id][t][f]*q[gp_id][t][g]*pp;
+                                                 //S EVENT
+                                                 //q[g_id][t][e]+=q[gp_id][t][f]*q[gpp_id][t][g] +q[gpp_id][t][f]*q[gp_id][t][g];
+                                                 q_sum+= S_pf_ppg + S_ppf_pg;
+                                                 //S.
+                                                 
+                                             }
+                                         //#pragma omp critical 
+                                         {
+                                             q[g_id][t][e]=q_sum; 
+                                         }
+                                         
+                                     }
+                                     //branches that cross to next time slice  
+                                     else
+                                     {
+                                         //trivial
+                                         ;//q[g_id][t][e]=q[g_id][t][e];
+                                     }			  
+                                 }		   
+                                 //boundaries for branch e.
+                             }
+                         }
+                     }
+                     
+                     if(1)
+                     {
+                         //events within slice rank at time t on alpha virtual branch
+                         scalar_type G_bar=Ge[-1][t];//exp(-(Delta_bar*(n-N)/N+Lambda_bar)*Delta_t );	
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt][alpha]=0;
+                         }
+                         scalar_type q_sum=0;
+                         scalar_type q_sum_nl=0;
+                         //#pragma omp  for schedule(dynamic,1)  reduction(+:q_sum_nl)
+                         for (int branch_i=0;branch_i<n;branch_i++)			  
+                         {
+                             
+                                 int e = time_slices[rank][branch_i];		
+                                 scalar_type tau_e=vector_parameter["tau"][e];
+                                 //G_bar*=exp(- tau_e*Delta_t);
+                                 
+                                 //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
+                                 //OMG
+                                 scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
+                                 //non-leaf directed partition
+                                 if (not is_a_leaf)
+                                     for (int i=0;i<N_parts;i++)
+                                     {	
+                                         long int gp_id=gp_ids[i];
+                                         long int gpp_id=gpp_ids[i];	    
+                                         scalar_type pp=p_part[i];				    
+                                         scalar_type T_ep_app=p_Ntau_e*q[gp_id][t][e]*q[gpp_id][t][alpha]*pp;
+                                         scalar_type T_ap_epp=p_Ntau_e*q[gp_id][t][alpha]*q[gpp_id][t][e]*pp;
+                                         //T EVENT
+                                         q_sum_nl+=T_ep_app+T_ap_epp;
+                                         //q[g_id][tpdt][alpha]+=p_Ntau_e*(q[gp_id][t][e]*q[gpp_id][t][alpha]+q[gp_id][t][alpha]*q[gpp_id][t][e]);
+                                         //T.
+                                         
+                                     }
+                             
+                         }
+                         //non-leaf directed partition
+                         if (not is_a_leaf)
+                             for (int i=0;i<N_parts;i++)
+                             {	
+                                 long int gp_id=gp_ids[i];
+                                 long int gpp_id=gpp_ids[i];	    
+                                 scalar_type pp=p_part[i];
+                                 scalar_type Sb=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha])*pp;
+                                 //S_bar EVENT
+                                 q_sum_nl+=Sb;
+                                 //q[g_id][tpdt][alpha]+=p_Delta_bar*(2*q[gp_id][t][alpha]*q[gpp_id][t][alpha]);
+                                 //S_bar.
+                                 
+                             }	    
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt_nl][alpha]+=q_sum_nl;
+                         }
+                         //#pragma omp  for schedule(dynamic,1)  reduction(+:q_sum)
+                         for (int branch_i=0;branch_i<n;branch_i++)			  
+                         {
+                                 
+                                 int e = time_slices[rank][branch_i];		
+                                 scalar_type tau_e=vector_parameter["tau"][e];
+                                 //OMG
+                                 //scalar_type p_Ntau_e=1-exp(-N*tau_e*Delta_t);
+                                 scalar_type p_Ntau_e=1-exp(-tau_e*Delta_t);
+                                 scalar_type TLb=p_Ntau_e*Ebar*q[g_id][t][e];
+                                 //TL_bar EVENT
+                                 q_sum+=TLb;
+                                 //q[g_id][tpdt][alpha]+=p_Ntau_e*Ebar*q[g_id][t][e];
+                                 //TL_bar.
+                             
+                         }
+                         //0 EVENT
+                         scalar_type empty=G_bar*q[g_id][t][alpha]; 
+                         q_sum+=empty;
+                         
+                         //q[g_id][tpdt][alpha]+=G_bar*q[g_id][t][alpha];
+                         //0.
+                         //max
+                         /*
+                          if (max_term<empty) 
+                          {
+                          max_term=empty;
+                          }
+                          */
+                         //max		    
+                         //#pragma omp critical 
+                         {
+                             
+                             q[g_id][tpdt][alpha]+=q_sum;
+                         }
+                         //events within slice rank at time t on alpha virtual branch.
+                     }
+                     if(1)
+                     {
+                         //DOES PREVENT SEGFAULT
+                         //#pragma omp for schedule(dynamic,1)
+                         for (int branch_i=0;branch_i<n;branch_i++)
+                         {	
+                                 
+                                 int e = time_slices[rank][branch_i];
+                                 scalar_type Get=Ge[e][t];
+                                 scalar_type Eet=Ee[e][t];	
+                                 scalar_type delta_e=vector_parameter["delta"][e];
+                                 scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
+                                 
+                                 //events within slice rank at time t on branch e 
 //#pragma omp critical 
-                        {
+                                 {
+                                     
+                                     q[g_id][tpdt][e]=0;
+                                 }
+                                 scalar_type q_sum=0;
+                                 scalar_type q_sum_nl=0;
+                                 
+                                 //non-leaf directed partition		   
+                                 
+                                 if (not is_a_leaf)
+                                     for (int i=0;i<N_parts;i++)
+                                     {	
+                                         long int gp_id=gp_ids[i];
+                                         long int gpp_id=gpp_ids[i];	    
+                                         scalar_type pp=p_part[i];
+                                         scalar_type qpe=q[gp_id][t][e];
+                                         scalar_type qppe=q[gpp_id][t][e];
+                                         scalar_type Sb_pa_ppe= p_Delta_bar*q[gp_id][t][alpha]*qppe*pp;
+                                         scalar_type Sb_pe_ppa= p_Delta_bar*qpe*q[gpp_id][t][alpha]*pp;
+                                         //S_bar EVENT
+                                         q_sum_nl+= Sb_pa_ppe + Sb_pe_ppa;
+                                         
+                                         //q[g_id][tpdt][e]+=p_Delta_bar*(q[gp_id][t][alpha]*q[gpp_id][t][e]+q[gp_id][t][e]*q[gpp_id][t][alpha]);			  
+                                         //S_bar.
+                                         
+                                         scalar_type D=p_delta_e*qpe*qppe*pp;
+                                         //D EVENT
+                                         q_sum_nl+= D;
+                                         
+                                         //q[g_id][tpdt][e]+=p_delta_e*q[gp_id][t][e]*q[gpp_id][t][e];
+                                         //D.
+                                         
+                                     }
+                                 
+                                 scalar_type SLb=p_Delta_bar*Eet*q[g_id][t][alpha];
+                                 //SL_bar EVENT
+                                 q_sum_nl+=SLb;
+                                 
+                                 //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
+                                 //SL_bar.
+//#pragma omp critical 
+                                 {
+                                     q[g_id][tpdt_nl][e]+=q_sum_nl;
+                                 }
+                                 scalar_type empty=Get*q[g_id][t][e];
+                                 //0 EVENT
+                                 q_sum+=empty;
+                                 
+                                 //q[g_id][tpdt][e]=Get*q[g_id][t][e];
+                                 //0.
+//#pragma omp critical 
+                                 {
+                                     q[g_id][tpdt][e]+=q_sum;
+                                 }
+                                 //events within slice rank at time t on branch e.
+                             
+                         }
+                     }
+                     //######################################################################################################################
+                     //#########################################INNNER LOOP##################################################################
+                     //######################################################################################################################		    
+                 }
+             }
+             gp_ids.clear();
+             gpp_ids.clear();
+             p_part.clear();
+             scalar_type tnow=omp_get_wtime();//t->elapsed();
+             cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
+             tatom=tnow;
+             
+             //  }
+             //}
+         }
+         
+     }     
+     
+ }
 
-                        q[g_id][tpdt][alpha]+=q_sum;
-                        }
-                        //events within slice rank at time t on alpha virtual branch.
-                    }
-                    if(1)
-                    {
-//DOES PREVENT SEGFAULT
-#pragma omp parallel for schedule(dynamic,1)
-		      for (int branch_i=0;branch_i<n;branch_i++)
-                        {	    
-                            int e = time_slices[rank][branch_i];
-                            scalar_type Get=Ge[e][t];
-                            scalar_type Eet=Ee[e][t];	
-                            scalar_type delta_e=vector_parameter["delta"][e];
-                            scalar_type p_delta_e=1-exp(-delta_e*Delta_t);
-                            
-                            //events within slice rank at time t on branch e 
-#pragma omp critical 
-                            {
-
-                            q[g_id][tpdt][e]=0;
-                            }
-                            scalar_type q_sum=0;
-                            scalar_type q_sum_nl=0;
-                            
-                            //non-leaf directed partition		   
-                            
-                            if (not is_a_leaf)
-			      for (int i=0;i<N_parts;i++)
-                                {	
-                                    long int gp_id=gp_ids[i];
-                                    long int gpp_id=gpp_ids[i];	    
-                                    scalar_type pp=p_part[i];
-                                    scalar_type qpe=q[gp_id][t][e];
-                                    scalar_type qppe=q[gpp_id][t][e];
-                                    scalar_type Sb_pa_ppe= p_Delta_bar*q[gp_id][t][alpha]*qppe*pp;
-                                    scalar_type Sb_pe_ppa= p_Delta_bar*qpe*q[gpp_id][t][alpha]*pp;
-                                    //S_bar EVENT
-                                    q_sum_nl+= Sb_pa_ppe + Sb_pe_ppa;
-                                    
-                                    //q[g_id][tpdt][e]+=p_Delta_bar*(q[gp_id][t][alpha]*q[gpp_id][t][e]+q[gp_id][t][e]*q[gpp_id][t][alpha]);			  
-                                    //S_bar.
-                                    
-                                    scalar_type D=p_delta_e*qpe*qppe*pp;
-                                    //D EVENT
-                                    q_sum_nl+= D;
-                                    
-                                    //q[g_id][tpdt][e]+=p_delta_e*q[gp_id][t][e]*q[gpp_id][t][e];
-                                    //D.
-                                    
-                                }
-                            
-                            scalar_type SLb=p_Delta_bar*Eet*q[g_id][t][alpha];
-                            //SL_bar EVENT
-                            q_sum_nl+=SLb;
-                            
-                            //q[g_id][tpdt][e]+=p_Delta_bar*Eet*q[g_id][t][alpha];
-                            //SL_bar.
-#pragma omp critical 
-                            {
-                            q[g_id][tpdt_nl][e]+=q_sum_nl;
-                            }
-                            scalar_type empty=Get*q[g_id][t][e];
-                            //0 EVENT
-                            q_sum+=empty;
-                            
-                            //q[g_id][tpdt][e]=Get*q[g_id][t][e];
-                            //0.
-#pragma omp critical 
-                            {
-                            q[g_id][tpdt][e]+=q_sum;
-                            }
-                            //events within slice rank at time t on branch e. 
-                        }
-                    }
-                    //######################################################################################################################
-                    //#########################################INNNER LOOP##################################################################
-                    //######################################################################################################################		    
-                }
-            }
-            gp_ids.clear();
-            gpp_ids.clear();
-            p_part.clear();
-	scalar_type tnow=omp_get_wtime();//t->elapsed();
-	cout <<  N_parts << " " <<(tnow-tatom) << endl; ;
-	tatom=tnow;
-
-      //  }
-	  }
-    }
-
-      //  }
 	scalar_type tnow=omp_get_wtime();//t->elapsed();
 	cout << endl << it2->first  << " "<< siz << " "<<tnow-told << " " <<(tnow-told)/siz << endl;
 	told=tnow;
